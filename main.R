@@ -84,16 +84,29 @@ df <- df_raw %>%
   mutate(across(c(sat_avg, tuition_in, tuition_out, grad_rate, earn10, debt_mdn,
                   pcip_cs, pcip_eng, pcip_math), as.numeric)) %>%
   # Control the net price by income level (0-48000)
-  mutate(
-    net_price = coalesce(
-      `latest.cost.net_price.public.by_income_level.0-48000`,
-      `latest.cost.net_price.private.by_income_level.0-48000`,
-      tuition_in
-    ),
-    stem_share = rowSums(across(c(pcip_cs, pcip_eng, pcip_math), ~ coalesce(.x, 0))),
-    earnings_to_net = earn10 / net_price,
-    earnings_adj_grad = (earn10 * grad_rate) / net_price
-  )
+mutate(
+  net_price_low = coalesce(
+    `latest.cost.net_price.public.by_income_level.0-48000`,
+    `latest.cost.net_price.private.by_income_level.0-48000`,
+    tuition_in
+  ),
+  net_price_middle = coalesce(
+    `latest.cost.net_price.public.by_income_level.48001-75000`,
+    `latest.cost.net_price.private.by_income_level.48001-75000`,
+    tuition_in
+  ),
+  net_price_upper = coalesce(
+    `latest.cost.net_price.public.by_income_level.75001-plus`,
+    `latest.cost.net_price.private.by_income_level.75001-plus`,
+    tuition_in
+  ),
+  # Default to middle-class net price
+  net_price = net_price_middle,
+  
+  stem_share = rowSums(across(c(pcip_cs, pcip_eng, pcip_math), ~ coalesce(.x, 0))),
+  earnings_to_net = earn10 / net_price,
+  earnings_adj_grad = (earn10 * grad_rate) / net_price
+)
 
 # =======================
 # 4. Descriptive Analysis
