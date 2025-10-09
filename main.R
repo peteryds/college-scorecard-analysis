@@ -1,7 +1,7 @@
-
 # ------------------------------------------------------------
 # College Scorecard Research Project — R Pipeline
-# (no plot; adds Ivy League, Florida public, and New College of Florida groups)
+# (no plot; adds Ivy League, Florida public, New College of Florida,
+#  Private Nonprofit (National), and Public (National) groups)
 # ------------------------------------------------------------
 
 library(httr)
@@ -17,22 +17,23 @@ library(stringr)
 # =======================
 # 1. API 
 # =======================
-api_key <- "bPTNeg7qIsuNipdCBuT0DPrgGbIcPOfxVsle0JXB"   # <- put your api.data.gov key here
+api_key <- ""   # <- put your api.data.gov key here
 
-# Explicitly choose which functions to prefer
+# Prefer dplyr variants of common conflicted functions
 suppressMessages({
   conflict_prefer("filter", "dplyr")
   conflict_prefer("lag", "dplyr")
   conflict_prefer("rename", "dplyr")
 })
 
+# Fields per College Scorecard data dictionary
 fields <- c(
   "id", "school.name", "school.state", "school.city",
+  "school.ownership",                               # <-- needed for public/private-nonprofit groups
   "latest.admissions.sat_scores.average.overall",
   "latest.cost.tuition.in_state",
   "latest.cost.tuition.out_of_state",
-  # Correct aggregate net price field:
-  "latest.cost.avg_net_price.overall",
+  "latest.cost.avg_net_price.overall",              # aggregate net price (correct field)
   "latest.completion.rate_suppressed.overall",
   "latest.earnings.10_yrs_after_entry.median",
   "latest.aid.median_debt.completers.overall",
@@ -79,10 +80,12 @@ df_raw <- get_all_schools(api_key, fields_str, per_page = 100)
 # 3. Data Cleaning
 # =======================
 colnames(df_raw)
+
 df <- dplyr::rename(df_raw,
                     name = school.name,
                     state = school.state,
                     city = school.city,
+                    ownership = school.ownership,
                     sat_avg = latest.admissions.sat_scores.average.overall,
                     tuition_in = latest.cost.tuition.in_state,
                     tuition_out = latest.cost.tuition.out_of_state,
@@ -94,9 +97,10 @@ df <- dplyr::rename(df_raw,
                     pcip_math = latest.academics.program_percentage.mathematics,
                     net_price_overall = latest.cost.avg_net_price.overall
 ) %>%
-  mutate(across(c(sat_avg, tuition_in, tuition_out, grad_rate, earn10, debt_mdn,
-                  pcip_cs, pcip_eng, pcip_math, net_price_overall),
-                ~ suppressWarnings(as.numeric(.x)))) %>%
+  mutate(across(c(
+    ownership, sat_avg, tuition_in, tuition_out, grad_rate, earn10, debt_mdn,
+    pcip_cs, pcip_eng, pcip_math, net_price_overall
+  ), ~ suppressWarnings(as.numeric(.x)))) %>%
   mutate(
     # Use overall net price (fallback to in-state tuition)
     net_price_overall = coalesce(net_price_overall, tuition_in),
@@ -152,6 +156,8 @@ fl_public_patterns <- c(
   "university of west florida$"
 )
 
+# Ownership codes per data dictionary:
+# 1 = Public, 2 = Private nonprofit, 3 = Private for-profit
 df <- df %>%
   mutate(
     name_norm = str_squish(str_to_lower(name)),
@@ -159,11 +165,16 @@ df <- df %>%
       str_detect(name_norm, str_c("^(", str_c(ivy_patterns, collapse = "|"), ")$")),
     is_fl_public = str_detect(name_norm, str_c("(", str_c(fl_public_patterns, collapse = "|"), ")")),
     is_ncf = name_norm == "new college of florida",
-    # Mutually-exclusive label for easy group summaries
+    is_public_nat = ownership == 1,
+    is_private_np_nat = ownership == 2,
+    # Mutually-exclusive label for easy group summaries:
+    # Priority: NCF > Ivy > Florida Public > Private Nonprofit (National) > Public (National) > Other
     group_label = case_when(
       is_ncf ~ "New College of Florida",
       is_ivy ~ "Ivy League",
       is_fl_public ~ "Florida Public",
+      is_private_np_nat ~ "Private Nonprofit (National)",
+      is_public_nat ~ "Public (National)",
       TRUE ~ "Other"
     )
   )
@@ -179,6 +190,12 @@ message("Florida public universities found (", nrow(fl_public_found), "):\n - ",
 ncf_found <- df %>% filter(is_ncf) %>% distinct(name)
 message("New College of Florida present? ", ifelse(nrow(ncf_found) > 0, "Yes", "No"))
 
+priv_np_found <- df %>% filter(is_private_np_nat) %>% distinct(name) %>% arrange(name)
+message("Private Nonprofit (National) count: ", nrow(priv_np_found))
+
+public_nat_found <- df %>% filter(is_public_nat) %>% distinct(name) %>% arrange(name)
+message("Public (National) count: ", nrow(public_nat_found))
+
 # =======================
 # 5. Descriptive Analysis
 # =======================
@@ -188,7 +205,7 @@ summary_tbl <- df %>%
 
 print(head(summary_tbl, 10))
 
-# Grouped means
+# Grouped means across your ROI metrics
 compare_vars <- c("net_price","earn10","grad_rate","sat_avg","debt_mdn",
                   "stem_share","earnings_to_net","earnings_adj_grad")
 
@@ -231,6 +248,20 @@ ncf_table <- df %>%
          stem_share, debt_mdn, earnings_to_net, earnings_adj_grad)
 print(ncf_table)
 
+private_np_table <- df %>%
+  filter(is_private_np_nat) %>%
+  select(name, state, net_price, earn10, grad_rate, sat_avg,
+         stem_share, debt_mdn, earnings_to_net, earnings_adj_grad) %>%
+  arrange(name)
+print(private_np_table)
+
+public_nat_table <- df %>%
+  filter(is_public_nat) %>%
+  select(name, state, net_price, earn10, grad_rate, sat_avg,
+         stem_share, debt_mdn, earnings_to_net, earnings_adj_grad) %>%
+  arrange(name)
+print(public_nat_table)
+
 # =======================
 # 6. Regression Analysis
 # =======================
@@ -255,4 +286,4 @@ cluster_df$cluster <- factor(km$cluster)
 
 print(fviz_cluster(list(data = cluster_mat, cluster = km$cluster), geom = "point"))
 
-# ===== (Visualization section removed as requested) =====
+# ===== Visualization section intentionally omitted =====
