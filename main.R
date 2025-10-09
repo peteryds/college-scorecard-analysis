@@ -491,3 +491,50 @@ p_grad_bar <- ggplot(grad_bar_df, aes(x = group_label, y = mean_gr, fill = group
     plot.caption = element_text(color = "#5A5A5A")
   )
 print(p_grad_bar)
+
+# =======================
+# Visualization — Scatterplot of Median Salary (10 Years) vs Net Price
+# =======================
+library(ggrepel)
+
+earn_df <- df %>%
+  filter(!is.na(earn10), !is.na(net_price), !is.na(group_label)) %>%
+  mutate(grad_rate = pmin(pmax(grad_rate, 0), 1))
+
+n_samp <- min(1000L, nrow(earn_df))
+scatter_sample <- if (n_samp >= 2L) dplyr::slice_sample(earn_df, n = n_samp) else earn_df
+
+# Highlight Ivies and New College of Florida specifically
+highlight_df <- scatter_sample %>%
+  filter(is_ivy | is_ncf) %>%
+  distinct(name, .keep_all = TRUE)
+
+p_earn_scatter <- ggplot(scatter_sample,
+                         aes(x = net_price, y = earn10,
+                             color = group_label, size = grad_rate)) +
+  geom_point(alpha = 0.65) +
+  geom_smooth(method = "lm", se = TRUE, linetype = "dashed", color = "black") +
+  geom_text_repel(data = highlight_df,
+                  aes(label = name),
+                  size = 3.2, min.segment.length = 0.1,
+                  box.padding = 0.3, point.padding = 0.2, max.overlaps = 50,
+                  show.legend = FALSE) +
+  scale_color_manual(values = group_palette) +
+  scale_size_continuous(range = c(2.5, 8), labels = scales::percent_format(accuracy = 1),
+                        name = "Graduation Rate") +
+  scale_x_continuous(labels = scales::dollar_format()) +
+  scale_y_continuous(labels = scales::dollar_format()) +
+  labs(
+    title = "Median Earnings 10 Years After Entry vs. Net Price",
+    subtitle = "Points sized by graduation rate; dashed line is overall linear fit. Labels shown for Ivy League and New College of Florida.",
+    x = "Net Price (overall)",
+    y = "Median Earnings after 10 Years",
+    color = "Group"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    panel.grid.minor = element_blank(),
+    legend.position = "right",
+    plot.title = element_text(face = "bold")
+  )
+print(p_earn_scatter)
