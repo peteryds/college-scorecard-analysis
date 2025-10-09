@@ -448,52 +448,9 @@ grad_counts <- grad_df %>%
 grad_counts_str <- paste0(grad_counts$group_label, " (", grad_counts$n, ")",
                           collapse = "  ·  ")
 
-# ------------------------------------------------------------------------------
-# 1) Graduation Rate — BOX PLOT (distribution-focused)
-# ------------------------------------------------------------------------------
-
-# Order groups by median grad rate (high → low)
-grad_order_box <- grad_df %>%
-  group_by(group_label) %>%
-  summarize(med_gr = median(grad_rate, na.rm = TRUE), .groups = "drop") %>%
-  arrange(desc(med_gr)) %>%
-  pull(group_label)
-
-overall_grad_median <- median(grad_df$grad_rate, na.rm = TRUE)
-
-p_grad_box <- ggplot(
-  grad_df %>% mutate(group_label = fct_relevel(group_label, grad_order_box)),
-  aes(x = group_label, y = grad_rate, fill = group_label)
-) +
-  geom_hline(yintercept = overall_grad_median, linetype = "dashed",
-             linewidth = 0.4, color = "#555555") +
-  annotate("text", x = Inf, y = overall_grad_median,
-           label = paste0("Overall median: ", percent(overall_grad_median, accuracy = 0.1)),
-           hjust = 1.05, vjust = -0.25, size = 3.2, color = "#555555") +
-  geom_boxplot(outlier.shape = NA, alpha = 0.85, color = "#333333", width = 0.7) +
-  geom_jitter(width = 0.15, alpha = 0.22, size = 1.2, color = "#2F2F2F") +
-  stat_summary(fun = median, geom = "point", shape = 21, size = 2.8,
-               fill = "white", color = "#111111", stroke = 0.6) +
-  scale_y_continuous(labels = percent_format(accuracy = 1)) +
-  scale_fill_manual(values = group_palette, guide = "none") +
-  labs(
-    title = "Graduation Rates by Comparison Group",
-    subtitle = paste0("Distribution view (median & IQR) • n = ", grad_counts_str),
-    x = NULL,
-    y = "Graduation Rate",
-    caption = "Notes: Boxes show IQR with median line; dots are individual institutions. Dashed line marks the overall median across groups."
-  ) +
-  theme_minimal(base_size = 13) +
-  theme(
-    panel.grid.minor = element_blank(),
-    axis.text.x = element_text(angle = 16, hjust = 1, vjust = 1, size = 11),
-    plot.title = element_text(face = "bold"),
-    plot.caption = element_text(color = "#5A5A5A")
-  )
-print(p_grad_box)
 
 # ------------------------------------------------------------------------------
-# 2) Graduation Rate — BAR CHART (average-focused with variability)
+# Graduation Rate — BAR CHART (average-focused with variability)
 # ------------------------------------------------------------------------------
 
 grad_bar_df <- grad_df %>%
