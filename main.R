@@ -1,5 +1,7 @@
+
 # ------------------------------------------------------------
 # College Scorecard Research Project — R Pipeline
+# (no plot; adds Ivy League, Florida public, and New College of Florida groups)
 # ------------------------------------------------------------
 
 library(httr)
@@ -10,17 +12,18 @@ library(factoextra)
 library(ggplot2)
 library(tidyverse)
 library(conflicted)
+library(stringr)
 
 # =======================
 # 1. API 
 # =======================
-api_key <- ""   # <- put your api.data.gov key here
+api_key <- "bPTNeg7qIsuNipdCBuT0DPrgGbIcPOfxVsle0JXB"   # <- put your api.data.gov key here
 
 # Explicitly choose which functions to prefer
 suppressMessages({
   conflict_prefer("filter", "dplyr")
   conflict_prefer("lag", "dplyr")
-  conflict_prefer("rename", "dplyr")   # <— added this line
+  conflict_prefer("rename", "dplyr")
 })
 
 fields <- c(
@@ -76,27 +79,28 @@ df_raw <- get_all_schools(api_key, fields_str, per_page = 100)
 # 3. Data Cleaning
 # =======================
 colnames(df_raw)
-df <- dplyr::rename(df_raw,   # <— explicitly calls dplyr’s rename()
-    name = school.name,
-    state = school.state,
-    city = school.city,
-    sat_avg = latest.admissions.sat_scores.average.overall,
-    tuition_in = latest.cost.tuition.in_state,
-    tuition_out = latest.cost.tuition.out_of_state,
-    grad_rate = latest.completion.rate_suppressed.overall,
-    earn10 = latest.earnings.10_yrs_after_entry.median,
-    debt_mdn = latest.aid.median_debt.completers.overall,
-    pcip_cs = latest.academics.program_percentage.computer,
-    pcip_eng = latest.academics.program_percentage.engineering,
-    pcip_math = latest.academics.program_percentage.mathematics
-  ) %>%
+df <- dplyr::rename(df_raw,
+                    name = school.name,
+                    state = school.state,
+                    city = school.city,
+                    sat_avg = latest.admissions.sat_scores.average.overall,
+                    tuition_in = latest.cost.tuition.in_state,
+                    tuition_out = latest.cost.tuition.out_of_state,
+                    grad_rate = latest.completion.rate_suppressed.overall,
+                    earn10 = latest.earnings.10_yrs_after_entry.median,
+                    debt_mdn = latest.aid.median_debt.completers.overall,
+                    pcip_cs = latest.academics.program_percentage.computer,
+                    pcip_eng = latest.academics.program_percentage.engineering,
+                    pcip_math = latest.academics.program_percentage.mathematics,
+                    net_price_overall = latest.cost.avg_net_price.overall
+) %>%
   mutate(across(c(sat_avg, tuition_in, tuition_out, grad_rate, earn10, debt_mdn,
-                  pcip_cs, pcip_eng, pcip_math), ~ suppressWarnings(as.numeric(.x)))) %>%
+                  pcip_cs, pcip_eng, pcip_math, net_price_overall),
+                ~ suppressWarnings(as.numeric(.x)))) %>%
   mutate(
-    net_price_overall = coalesce(
-      `latest.cost.avg_net_price.overall`,
-      tuition_in
-    ),
+    # Use overall net price (fallback to in-state tuition)
+    net_price_overall = coalesce(net_price_overall, tuition_in),
+    # Keep your original names for compatibility
     net_price_low    = net_price_overall,
     net_price_middle = net_price_overall,
     net_price_upper  = net_price_overall,
@@ -107,39 +111,138 @@ df <- dplyr::rename(df_raw,   # <— explicitly calls dplyr’s rename()
   )
 
 # =======================
-# 4. Descriptive Analysis
+# 4. Comparison Groups
+# =======================
+
+# Ivy League (canonical Scorecard names + light pattern backup)
+ivy_names <- c(
+  "Brown University",
+  "Columbia University in the City of New York",
+  "Cornell University",
+  "Dartmouth College",
+  "Harvard University",
+  "University of Pennsylvania",
+  "Princeton University",
+  "Yale University"
+)
+ivy_patterns <- c(
+  "brown university",
+  "columbia university( in the city of new york)?",
+  "cornell university",
+  "dartmouth college",
+  "harvard university",
+  "university of pennsylvania",
+  "princeton university",
+  "yale university"
+)
+
+# Florida public universities (State University System of Florida)
+fl_public_patterns <- c(
+  "university of florida$",
+  "florida state university$",
+  "university of south florida",         # allow campus suffixes
+  "university of central florida$",
+  "florida international university$",
+  "florida atlantic university$",
+  "florida gulf coast university$",
+  "university of north florida$",
+  "florida agricultural and mechanical university$",  # FAMU
+  "florida polytechnic university$",
+  "new college of florida$",              # also singled out below
+  "university of west florida$"
+)
+
+df <- df %>%
+  mutate(
+    name_norm = str_squish(str_to_lower(name)),
+    is_ivy = name %in% ivy_names |
+      str_detect(name_norm, str_c("^(", str_c(ivy_patterns, collapse = "|"), ")$")),
+    is_fl_public = str_detect(name_norm, str_c("(", str_c(fl_public_patterns, collapse = "|"), ")")),
+    is_ncf = name_norm == "new college of florida",
+    # Mutually-exclusive label for easy group summaries
+    group_label = case_when(
+      is_ncf ~ "New College of Florida",
+      is_ivy ~ "Ivy League",
+      is_fl_public ~ "Florida Public",
+      TRUE ~ "Other"
+    )
+  )
+
+# Quick sanity checks (printed to console)
+ivies_found <- df %>% filter(is_ivy) %>% distinct(name) %>% arrange(name)
+message("Ivies found (", nrow(ivies_found), "):\n - ", paste(ivies_found$name, collapse = "\n - "))
+
+fl_public_found <- df %>% filter(is_fl_public) %>% distinct(name) %>% arrange(name)
+message("Florida public universities found (", nrow(fl_public_found), "):\n - ",
+        paste(fl_public_found$name, collapse = "\n - "))
+
+ncf_found <- df %>% filter(is_ncf) %>% distinct(name)
+message("New College of Florida present? ", ifelse(nrow(ncf_found) > 0, "Yes", "No"))
+
+# =======================
+# 5. Descriptive Analysis
 # =======================
 summary_tbl <- df %>%
   select(name, state, net_price, earn10, grad_rate, sat_avg,
+         stem_share, debt_mdn, earnings_to_net, earnings_adj_grad, group_label)
+
+print(head(summary_tbl, 10))
+
+# Grouped means
+compare_vars <- c("net_price","earn10","grad_rate","sat_avg","debt_mdn",
+                  "stem_share","earnings_to_net","earnings_adj_grad")
+
+group_means <- df %>%
+  group_by(group_label) %>%
+  summarize(across(all_of(compare_vars), ~ mean(.x, na.rm = TRUE)), .groups = "drop")
+print(group_means)
+
+# Robust distribution summary (median / IQR)
+group_robust <- df %>%
+  group_by(group_label) %>%
+  summarize(
+    across(all_of(compare_vars),
+           list(median = ~median(.x, na.rm = TRUE),
+                p25 = ~quantile(.x, 0.25, na.rm = TRUE),
+                p75 = ~quantile(.x, 0.75, na.rm = TRUE)),
+           .names = "{.col}_{.fn}"),
+    .groups = "drop"
+  )
+print(group_robust)
+
+# Focus tables
+ivy_table <- df %>%
+  filter(is_ivy) %>%
+  select(name, state, net_price, earn10, grad_rate, sat_avg,
+         stem_share, debt_mdn, earnings_to_net, earnings_adj_grad) %>%
+  arrange(name)
+print(ivy_table)
+
+fl_public_table <- df %>%
+  filter(is_fl_public) %>%
+  select(name, state, net_price, earn10, grad_rate, sat_avg,
+         stem_share, debt_mdn, earnings_to_net, earnings_adj_grad) %>%
+  arrange(name)
+print(fl_public_table)
+
+ncf_table <- df %>%
+  filter(is_ncf) %>%
+  select(name, state, net_price, earn10, grad_rate, sat_avg,
          stem_share, debt_mdn, earnings_to_net, earnings_adj_grad)
-
-head(summary_tbl, 10)
-
-top_value <- df %>%
-  filter(
-    !is.na(earnings_to_net),
-    !is.na(net_price),
-    !is.na(earn10),
-    earn10 > 90000
-  ) %>%
-  arrange(desc(earnings_to_net)) %>%
-  select(name, state, net_price, earn10, earnings_to_net) %>%
-  head(100)
-
-print(top_value)
+print(ncf_table)
 
 # =======================
-# 5. Regression Analysis
+# 6. Regression Analysis
 # =======================
 reg_df <- df %>%
   filter(!is.na(earn10), !is.na(net_price),
          !is.na(sat_avg), !is.na(grad_rate))
 
 lm1 <- lm(earn10 ~ net_price + sat_avg + grad_rate + stem_share, data = reg_df)
-summary(lm1)
+print(summary(lm1))
 
 # =======================
-# 6. K-means
+# 7. K-means
 # =======================
 cluster_df <- df %>%
   filter(!is.na(net_price), !is.na(earn10), !is.na(grad_rate), !is.na(debt_mdn)) %>%
@@ -150,28 +253,6 @@ set.seed(123)
 km <- kmeans(cluster_mat, centers = 4, nstart = 50)
 cluster_df$cluster <- factor(km$cluster)
 
-fviz_cluster(list(data = cluster_mat, cluster = km$cluster), geom = "point")
+print(fviz_cluster(list(data = cluster_mat, cluster = km$cluster), geom = "point"))
 
-# =======================
-# 7. Visualization
-# =======================
-plot_df <- df %>%
-  filter(!is.na(earn10), !is.na(net_price), !is.na(grad_rate))
-
-n_samp <- min(500L, nrow(plot_df))
-
-if (n_samp >= 2L) {
-  plot_df %>%
-    dplyr::slice_sample(n = n_samp) %>%
-    ggplot(aes(x = net_price, y = earn10, size = grad_rate, color = stem_share)) +
-    geom_point(alpha = 0.6) +
-    scale_size_continuous(range = c(1, 10), name = "Grad Rate") +
-    scale_color_gradient(low = "lightblue", high = "darkblue", name = "STEM %") +
-    labs(title = "College ROI: Earnings vs Cost",
-         subtitle = "Bubble size = Graduation Rate, Color = STEM Share",
-         x = "Net Price ($)", y = "10-Year Earnings ($)") +
-    theme_minimal() +
-    geom_smooth(method = "lm", se = TRUE, color = "red", linetype = "dashed")
-} else {
-  message("Not enough rows to plot after filtering (need at least 2).")
-}
+# ===== (Visualization section removed as requested) =====
