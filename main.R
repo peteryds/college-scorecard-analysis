@@ -8,12 +8,17 @@ library(dplyr)
 library(tidyr)
 library(factoextra)
 library(ggplot2)
+library(tidyverse)
 
 # =======================
 # 1. API 
 # =======================
 api_key <- ""   
 # create api key here: https://api.data.gov/signup/ 
+
+# Explicitly choose which filter to use
+conflict_prefer("filter", "dplyr")
+conflict_prefer("lag", "dplyr")
 
 fields <- c(
   "id", "school.name", "school.state", "school.city",
@@ -153,3 +158,20 @@ km <- kmeans(cluster_mat, centers = 4, nstart = 50)
 cluster_df$cluster <- factor(km$cluster)
 
 fviz_cluster(list(data = cluster_mat, cluster = km$cluster), geom = "point")
+
+# =======================
+# 7. Visualization
+# =======================
+# Earnings vs Net Price with graduation rate as bubble size
+df %>%
+  filter(!is.na(earn10), !is.na(net_price), !is.na(grad_rate)) %>%
+  sample_n(500) %>%
+  ggplot(aes(x = net_price, y = earn10, size = grad_rate, color = stem_share)) +
+  geom_point(alpha = 0.6) +
+  scale_size_continuous(range = c(1, 10), name = "Grad Rate") +
+  scale_color_gradient(low = "lightblue", high = "darkblue", name = "STEM %") +
+  labs(title = "College ROI: Earnings vs Cost",
+       subtitle = "Bubble size = Graduation Rate, Color = STEM Share",
+       x = "Net Price ($)", y = "10-Year Earnings ($)") +
+  theme_minimal() +
+  geom_smooth(method = "lm", se = TRUE, color = "red", linetype = "dashed")
