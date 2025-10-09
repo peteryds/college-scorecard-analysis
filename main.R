@@ -285,64 +285,252 @@ km <- kmeans(cluster_mat, centers = 4, nstart = 50)
 cluster_df$cluster <- factor(km$cluster)
 
 print(fviz_cluster(list(data = cluster_mat, cluster = km$cluster), geom = "point"))
-
 # =======================
-# Visualization — Box plots (SAT and Net Price) by comparison group
-# Append this to the end of your script
+# Visualization — SAT Box Plot & Net Price Bar Chart by Comparison Group
+# (Append this to the end of your script)
 # =======================
-library(scales)     # for dollar() / comma()
-library(forcats)    # for fct_relevel (already in tidyverse, but explicit is nice)
 
-# -------- Box: SAT averages by group --------
+library(scales)     # pretty axis labels (dollar / comma)
+library(forcats)    # factor reordering helpers
+library(ggplot2)
+library(dplyr)
+library(stringr)
+
+# A friendly, high-contrast palette for groups (extend if you add more groups)
+group_palette <- c(
+  "Ivy League"                = "#E4572E",
+  "Florida Public"            = "#17BEBB",
+  "New College of Florida"    = "#7F95D1",
+  "Private Nonprofit (National)" = "#76B041",
+  "Public (National)"         = "#F1C40F",
+  "Other"                     = "#7D7D7D"
+)
+
+# ------------------------------------------------------------------------------
+# 1) SAT Box Plot by Group — with richer styling & annotations
+# ------------------------------------------------------------------------------
+
 sat_df <- df %>%
   filter(!is.na(sat_avg), !is.na(group_label))
 
-# Order groups by median SAT (high -> low)
+# Sample sizes for subtitle
+sat_counts <- sat_df %>%
+  count(group_label, name = "n") %>%
+  arrange(desc(n))
+
+sat_subtitle <- paste0(
+  "Groups ordered by median SAT (high → low) • n = ",
+  paste0(sat_counts$group_label, " (", sat_counts$n, ")", collapse = "  ·  ")
+)
+
+# Order groups by median SAT (high → low)
 sat_order <- sat_df %>%
   group_by(group_label) %>%
   summarize(med_sat = median(sat_avg, na.rm = TRUE), .groups = "drop") %>%
   arrange(desc(med_sat)) %>%
   pull(group_label)
 
+overall_sat_median <- median(sat_df$sat_avg, na.rm = TRUE)
+
 p_sat_box <- ggplot(
   sat_df %>% mutate(group_label = forcats::fct_relevel(group_label, sat_order)),
-  aes(x = group_label, y = sat_avg)
+  aes(x = group_label, y = sat_avg, fill = group_label)
 ) +
-  geom_boxplot(outlier.shape = NA) +
-  geom_jitter(width = 0.15, alpha = 0.25, size = 1) +
+  # a subtle reference line for overall median SAT
+  geom_hline(yintercept = overall_sat_median, linetype = "dashed", linewidth = 0.4, color = "#555555") +
+  annotate("text",
+           x = Inf, y = overall_sat_median,
+           label = paste0("Overall median: ", comma(overall_sat_median)),
+           hjust = 1.05, vjust = -0.25, size = 3.2, color = "#555555") +
+  geom_boxplot(outlier.shape = NA, alpha = 0.85, color = "#333333", width = 0.7) +
+  # light jitter to show density
+  geom_jitter(width = 0.15, alpha = 0.22, size = 1.2, color = "#2F2F2F") +
+  # highlight group medians with a larger point
+  stat_summary(fun = median, geom = "point", shape = 21, size = 2.8,
+               fill = "white", color = "#111111", stroke = 0.6) +
+  scale_fill_manual(values = group_palette, guide = "none") +
   labs(
     title = "SAT Scores by Comparison Group",
-    x = "Group",
-    y = "Average SAT (overall)"
+    subtitle = sat_subtitle,
+    x = NULL,
+    y = "Average SAT (overall)",
+    caption = "Notes: Boxes show IQR with median line; dots are individual institutions. Dashed line marks the overall median SAT across groups."
   ) +
-  theme_minimal(base_size = 12) +
-  theme(axis.text.x = element_text(angle = 20, hjust = 1))
+  theme_minimal(base_size = 13) +
+  theme(
+    panel.grid.minor = element_blank(),
+    axis.text.x = element_text(angle = 16, hjust = 1, vjust = 1, size = 11),
+    plot.title = element_text(face = "bold"),
+    plot.caption = element_text(color = "#5A5A5A")
+  )
 print(p_sat_box)
 
-# -------- Box: Net price by group --------
-np_df <- df %>%
-  filter(!is.na(net_price), !is.na(group_label))
+# ------------------------------------------------------------------------------
+# 2) Net Price Bar Chart by Group — median with IQR error bars & labels
+#   (replaces the net price box plot for a clearer group comparison)
+# ------------------------------------------------------------------------------
 
-# Order groups by median net price (low -> high for affordability)
-np_order <- np_df %>%
+price_df <- df %>%
+  filter(!is.na(net_price), !is.na(group_label)) %>%
   group_by(group_label) %>%
-  summarize(med_np = median(net_price, na.rm = TRUE), .groups = "drop") %>%
-  arrange(med_np) %>%
+  summarize(
+    n = n(),
+    median_net_price = median(net_price, na.rm = TRUE),
+    iqr = IQR(net_price, na.rm = TRUE),                 # interquartile range as a variability band
+    .groups = "drop"
+  )
+
+# Order groups by median price (low → high for affordability)
+price_df <- price_df %>%
+  mutate(group_label = fct_reorder(group_label, median_net_price))
+
+price_subtitle <- paste0(
+  "Bars show group median net price (overall) with IQR error bars • n = ",
+  paste0(price_df$group_label, " (", price_df$n, ")", collapse = "  ·  ")
+)
+
+p_net_bar <- ggplot(price_df, aes(x = group_label, y = median_net_price, fill = group_label)) +
+  geom_col(alpha = 0.9, width = 0.72, color = "#333333") +
+  geom_errorbar(aes(ymin = median_net_price - iqr / 2, ymax = median_net_price + iqr / 2),
+                width = 0.18, color = "#2F2F2F", linewidth = 0.6) +
+  # label bars with the median dollar amount
+  geom_text(aes(label = dollar(median_net_price)),
+            vjust = -0.4, size = 3.7, color = "#1E1E1E", fontface = "bold") +
+  scale_fill_manual(values = group_palette, guide = "none") +
+  scale_y_continuous(labels = dollar_format(), expand = expansion(mult = c(0.05, 0.12))) +
+  labs(
+    title = "Median Net Price by Comparison Group",
+    subtitle = price_subtitle,
+    x = NULL,
+    y = "Median Net Price (overall)",
+    caption = "Notes: Bars represent group medians; error bars show ±½ IQR as a compact measure of variability.\nNet price is the average annual cost after grants and scholarships."
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    panel.grid.minor = element_blank(),
+    axis.text.x = element_text(angle = 16, hjust = 1, vjust = 1, size = 11),
+    plot.title = element_text(face = "bold"),
+    plot.caption = element_text(color = "#5A5A5A")
+  )
+print(p_net_bar)
+
+# =======================
+# Visualization — Graduation Rates by Comparison Group
+# (Append this block to the end of your script)
+# =======================
+
+library(ggplot2)
+library(dplyr)
+library(forcats)
+library(scales)
+library(stringr)
+
+# Consistent palette with your earlier visuals
+group_palette <- c(
+  "Ivy League"                   = "#E4572E",
+  "Florida Public"               = "#17BEBB",
+  "New College of Florida"       = "#7F95D1",
+  "Private Nonprofit (National)" = "#76B041",
+  "Public (National)"            = "#F1C40F",
+  "Other"                        = "#7D7D7D"
+)
+
+# Filter once for clean inputs
+grad_df <- df %>%
+  filter(!is.na(grad_rate), !is.na(group_label)) %>%
+  mutate(grad_rate = pmin(pmax(grad_rate, 0), 1))  # clamp to [0,1] if any oddities
+
+# Sample sizes for subtitles
+grad_counts <- grad_df %>%
+  count(group_label, name = "n") %>%
+  arrange(desc(n))
+
+grad_counts_str <- paste0(grad_counts$group_label, " (", grad_counts$n, ")",
+                          collapse = "  ·  ")
+
+# ------------------------------------------------------------------------------
+# 1) Graduation Rate — BOX PLOT (distribution-focused)
+# ------------------------------------------------------------------------------
+
+# Order groups by median grad rate (high → low)
+grad_order_box <- grad_df %>%
+  group_by(group_label) %>%
+  summarize(med_gr = median(grad_rate, na.rm = TRUE), .groups = "drop") %>%
+  arrange(desc(med_gr)) %>%
   pull(group_label)
 
-p_net_box <- ggplot(
-  np_df %>% mutate(group_label = forcats::fct_relevel(group_label, np_order)),
-  aes(x = group_label, y = net_price)
-) +
-  geom_boxplot(outlier.shape = NA) +
-  geom_jitter(width = 0.15, alpha = 0.25, size = 1) +
-  scale_y_continuous(labels = scales::dollar) +
-  labs(
-    title = "Net Price by Comparison Group",
-    x = "Group",
-    y = "Net Price (overall)"
-  ) +
-  theme_minimal(base_size = 12) +
-  theme(axis.text.x = element_text(angle = 20, hjust = 1))
-print(p_net_box)
+overall_grad_median <- median(grad_df$grad_rate, na.rm = TRUE)
 
+p_grad_box <- ggplot(
+  grad_df %>% mutate(group_label = fct_relevel(group_label, grad_order_box)),
+  aes(x = group_label, y = grad_rate, fill = group_label)
+) +
+  geom_hline(yintercept = overall_grad_median, linetype = "dashed",
+             linewidth = 0.4, color = "#555555") +
+  annotate("text", x = Inf, y = overall_grad_median,
+           label = paste0("Overall median: ", percent(overall_grad_median, accuracy = 0.1)),
+           hjust = 1.05, vjust = -0.25, size = 3.2, color = "#555555") +
+  geom_boxplot(outlier.shape = NA, alpha = 0.85, color = "#333333", width = 0.7) +
+  geom_jitter(width = 0.15, alpha = 0.22, size = 1.2, color = "#2F2F2F") +
+  stat_summary(fun = median, geom = "point", shape = 21, size = 2.8,
+               fill = "white", color = "#111111", stroke = 0.6) +
+  scale_y_continuous(labels = percent_format(accuracy = 1)) +
+  scale_fill_manual(values = group_palette, guide = "none") +
+  labs(
+    title = "Graduation Rates by Comparison Group",
+    subtitle = paste0("Distribution view (median & IQR) • n = ", grad_counts_str),
+    x = NULL,
+    y = "Graduation Rate",
+    caption = "Notes: Boxes show IQR with median line; dots are individual institutions. Dashed line marks the overall median across groups."
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    panel.grid.minor = element_blank(),
+    axis.text.x = element_text(angle = 16, hjust = 1, vjust = 1, size = 11),
+    plot.title = element_text(face = "bold"),
+    plot.caption = element_text(color = "#5A5A5A")
+  )
+print(p_grad_box)
+
+# ------------------------------------------------------------------------------
+# 2) Graduation Rate — BAR CHART (average-focused with variability)
+# ------------------------------------------------------------------------------
+
+grad_bar_df <- grad_df %>%
+  group_by(group_label) %>%
+  summarize(
+    n = n(),
+    mean_gr = mean(grad_rate, na.rm = TRUE),
+    sd_gr   = sd(grad_rate,  na.rm = TRUE),
+    iqr_gr  = IQR(grad_rate, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  # Order by mean graduation rate (high → low)
+  mutate(group_label = fct_reorder(group_label, mean_gr, .desc = TRUE))
+
+p_grad_bar <- ggplot(grad_bar_df, aes(x = group_label, y = mean_gr, fill = group_label)) +
+  geom_col(alpha = 0.9, width = 0.72, color = "#333333") +
+  # Use IQR/2 as a compact variability band around the mean
+  geom_errorbar(aes(ymin = pmax(mean_gr - iqr_gr/2, 0),
+                    ymax = pmin(mean_gr + iqr_gr/2, 1)),
+                width = 0.18, color = "#2F2F2F", linewidth = 0.6) +
+  geom_text(aes(label = percent(mean_gr, accuracy = 0.1)),
+            vjust = -0.4, size = 3.7, color = "#1E1E1E", fontface = "bold") +
+  scale_y_continuous(labels = percent_format(accuracy = 1),
+                     expand = expansion(mult = c(0.05, 0.12))) +
+  scale_fill_manual(values = group_palette, guide = "none") +
+  labs(
+    title = "Average Graduation Rate by Comparison Group",
+    subtitle = paste0("Bars show group mean; error bars ±½ IQR • n = ", grad_counts_str),
+    x = NULL,
+    y = "Average Graduation Rate",
+    caption = "Notes: Mean emphasizes overall level; IQR/2 error bars give a robust sense of within-group variability."
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    panel.grid.minor = element_blank(),
+    axis.text.x = element_text(angle = 16, hjust = 1, vjust = 1, size = 11),
+    plot.title = element_text(face = "bold"),
+    plot.caption = element_text(color = "#5A5A5A")
+  )
+print(p_grad_bar)
