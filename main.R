@@ -286,4 +286,63 @@ cluster_df$cluster <- factor(km$cluster)
 
 print(fviz_cluster(list(data = cluster_mat, cluster = km$cluster), geom = "point"))
 
-# ===== Visualization section intentionally omitted =====
+# =======================
+# Visualization — Box plots (SAT and Net Price) by comparison group
+# Append this to the end of your script
+# =======================
+library(scales)     # for dollar() / comma()
+library(forcats)    # for fct_relevel (already in tidyverse, but explicit is nice)
+
+# -------- Box: SAT averages by group --------
+sat_df <- df %>%
+  filter(!is.na(sat_avg), !is.na(group_label))
+
+# Order groups by median SAT (high -> low)
+sat_order <- sat_df %>%
+  group_by(group_label) %>%
+  summarize(med_sat = median(sat_avg, na.rm = TRUE), .groups = "drop") %>%
+  arrange(desc(med_sat)) %>%
+  pull(group_label)
+
+p_sat_box <- ggplot(
+  sat_df %>% mutate(group_label = forcats::fct_relevel(group_label, sat_order)),
+  aes(x = group_label, y = sat_avg)
+) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.15, alpha = 0.25, size = 1) +
+  labs(
+    title = "SAT Scores by Comparison Group",
+    x = "Group",
+    y = "Average SAT (overall)"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(axis.text.x = element_text(angle = 20, hjust = 1))
+print(p_sat_box)
+
+# -------- Box: Net price by group --------
+np_df <- df %>%
+  filter(!is.na(net_price), !is.na(group_label))
+
+# Order groups by median net price (low -> high for affordability)
+np_order <- np_df %>%
+  group_by(group_label) %>%
+  summarize(med_np = median(net_price, na.rm = TRUE), .groups = "drop") %>%
+  arrange(med_np) %>%
+  pull(group_label)
+
+p_net_box <- ggplot(
+  np_df %>% mutate(group_label = forcats::fct_relevel(group_label, np_order)),
+  aes(x = group_label, y = net_price)
+) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.15, alpha = 0.25, size = 1) +
+  scale_y_continuous(labels = scales::dollar) +
+  labs(
+    title = "Net Price by Comparison Group",
+    x = "Group",
+    y = "Net Price (overall)"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(axis.text.x = element_text(angle = 20, hjust = 1))
+print(p_net_box)
+
