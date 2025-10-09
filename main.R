@@ -10,6 +10,10 @@ library(factoextra)
 library(ggplot2)
 library(tidyverse)
 
+library(conflicted)
+conflict_prefer("filter", "dplyr")
+conflict_prefer("lag", "dplyr")
+
 # =======================
 # 1. API 
 # =======================
@@ -21,19 +25,116 @@ conflict_prefer("filter", "dplyr")
 conflict_prefer("lag", "dplyr")
 
 fields <- c(
-  "id", "school.name", "school.state", "school.city",
+  # ------------------------
+  # Basic Identifiers
+  # ------------------------
+  "id",
+  "school.name",
+  "school.state",
+  "school.city",
+  "school.region_id",
+  "school.carnegie_size_setting",
+  "school.institutional_characteristics.level",
+
+  # ------------------------
+  # Admissions
+  # ------------------------
   "latest.admissions.sat_scores.average.overall",
+  "latest.admissions.act_scores.midpoint.cumulative",
+  "latest.admissions.admission_rate.overall",
+
+  # ------------------------
+  # Cost & Tuition
+  # ------------------------
   "latest.cost.tuition.in_state",
   "latest.cost.tuition.out_of_state",
-  "latest.cost.net_price.public", 
+  "latest.cost.tuition.program_year",
+  "latest.cost.net_price.public",
   "latest.cost.net_price.private",
+  "latest.cost.avg_net_price.overall",
+
+  # --- Cost by Income Level (Public & Private) ---
+  "latest.cost.net_price.public.by_income_level.0-30000",
+  "latest.cost.net_price.public.by_income_level.30001-48000",
+  "latest.cost.net_price.public.by_income_level.48001-75000",
+  "latest.cost.net_price.public.by_income_level.75001-110000",
+  "latest.cost.net_price.public.by_income_level.110001-plus",
+  "latest.cost.net_price.private.by_income_level.0-30000",
+  "latest.cost.net_price.private.by_income_level.30001-48000",
+  "latest.cost.net_price.private.by_income_level.48001-75000",
+  "latest.cost.net_price.private.by_income_level.75001-110000",
+  "latest.cost.net_price.private.by_income_level.110001-plus",
+
+  # ------------------------
+  # Completion & Outcomes
+  # ------------------------
   "latest.completion.rate_suppressed.overall",
+  "latest.completion.consumer_rate.overall",
+  "latest.completion.150_4yr_completion_rate_students.overall",
+  "latest.completion.4yr_completion_rate.overall",
+  "latest.completion.8yr_completion_rate.overall",
+
+  # ------------------------
+  # Earnings & Employment
+  # ------------------------
   "latest.earnings.10_yrs_after_entry.median",
+  "latest.earnings.6_yrs_after_entry.median",
+  "latest.earnings.8_yrs_after_entry.median",
+  "latest.earnings.combined_median_earnings",
+  "latest.earnings.mean_earnings",
+  "latest.earnings.median_earnings",
+  "latest.earnings.count_earnings_gt_25k",
+
+  # ------------------------
+  # Aid & Debt
+  # ------------------------
   "latest.aid.median_debt.completers.overall",
+  "latest.aid.median_debt.noncompleters",
+  "latest.aid.students_with_any_loan",
+  "latest.aid.students_with_pell_grant",
+  "latest.aid.default_rate",
+
+  # ------------------------
+  # Academics: Program Percentages
+  # ------------------------
   "latest.academics.program_percentage.computer",
   "latest.academics.program_percentage.engineering",
-  "latest.academics.program_percentage.math"
+  "latest.academics.program_percentage.mathematics",
+  "latest.academics.program_percentage.physical_science",
+  "latest.academics.program_percentage.business_marketing",
+  "latest.academics.program_percentage.education",
+  "latest.academics.program_percentage.health",
+  "latest.academics.program_percentage.social_science",
+  "latest.academics.program_percentage.visual_performing",
+  "latest.academics.program_percentage.psychology",
+  "latest.academics.program_percentage.communications_technology",
+  "latest.academics.program_percentage.security_law_enforcement",
+  "latest.academics.program_percentage.legal",
+  "latest.academics.program_percentage.humanities",
+
+  # ------------------------
+  # Demographics
+  # ------------------------
+  "latest.student.size",
+  "latest.student.demographics.men",
+  "latest.student.demographics.women",
+  "latest.student.demographics.first_generation",
+  "latest.student.demographics.share_white",
+  "latest.student.demographics.share_black",
+  "latest.student.demographics.share_hispanic",
+  "latest.student.demographics.share_asian",
+  "latest.student.demographics.share_pacific_islander",
+  "latest.student.demographics.share_two_or_more",
+  "latest.student.demographics.share_non_resident_alien",
+
+  # ------------------------
+  # Misc
+  # ------------------------
+  "latest.school.ownership",
+  "latest.school.degrees_awarded.predominant",
+  "latest.school.locale"
 )
+
 
 fields_str <- paste(fields, collapse = ",")
 
