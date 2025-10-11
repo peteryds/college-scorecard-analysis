@@ -86,7 +86,16 @@ group_means <- df_final %>%
 kable(group_means, caption = "Key Metric Averages by Comparison Group")
 ```
 
-The table shows that Ivy League schools lead in SAT scores and post-graduation earnings, but also have the highest net price. Public universities, in contrast, offer a much lower net price.
+
+The table reveals several important patterns across institution types. Ivy League schools lead in SAT scores (1539) and post-graduation earnings ($102,655), but also have the highest net price ($24,262). 
+
+Notably, Florida Public universities demonstrate exceptional value - despite having similar SAT scores to Private Nonprofit schools (1193 vs 1202), their graduates actually earn more ($55,776 vs $53,786), while charging less than half the price. This suggests strong return on investment, possibly driven by Florida's robust job market.
+
+Graduation rates show stark inequality across sectors. Ivy League schools graduate 96.2% of students, while Public National institutions graduate only 44.6% - meaning more than half of students at typical public universities don't complete their degrees. This 51.6 percentage point gap represents a significant equity challenge in higher education.
+
+The "Other" category presents the poorest value proposition, charging nearly as much as Private Nonprofit institutions ($20,228) while producing the lowest earnings outcomes ($33,159). Meanwhile, New College of Florida stands out for affordability at just $4,536 - less than half the cost of other public universities - while still delivering respectable earnings of $48,082.
+
+When examining cost-benefit ratios, Private Nonprofit schools cost 2.1 times more than Public schools but deliver only 19% higher earnings, suggesting the private premium may not justify the additional expense for many students focused on earnings potential.
 
 ## Visual Analysis
 
@@ -129,7 +138,6 @@ As seen in the chart, while Ivy League schools (red points) are more expensive, 
 <!-- ```{r plot-map} -->
 <!-- print(p_map) -->
 <!-- ``` -->
-As seen in the above map, certain areas of the country are more likely than others to include top ROI performing schools. California and Georgia are notable in regards to this metric. 
 
 ## Conclusion
 
