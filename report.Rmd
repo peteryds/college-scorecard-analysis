@@ -119,6 +119,10 @@ plot_earnings_scatterplot(df_final)
 
 As seen in the chart, while Ivy League schools (red points) are more expensive, their graduates also tend to have the highest earnings, suggesting a strong return on investment.
 
+```{r plot-map}
+print(p_map)
+```
+
 ## Conclusion
 
 Through this modular analysis pipeline, we have clearly compared the performance of different university groups. The analysis reveals strong correlations between school type, cost, and the future success of their students.
