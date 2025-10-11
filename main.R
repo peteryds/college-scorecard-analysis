@@ -1,7 +1,7 @@
 # main.R: Main script for the College Scorecard analysis pipeline
 
 # ------------------------------------------------------------
-# 1. Setup
+# Section 1: Setup
 # ------------------------------------------------------------
 # Load required packages
 suppressPackageStartupMessages({
@@ -26,6 +26,7 @@ source("R/load_data.R")
 source("R/clean_data.R")
 source("R/define_groups.R")
 source("R/visualizations.R")
+source("R/data_assessment.R")
 
 # Load environment variables (API_KEY) from .env file
 load_dot_env()
@@ -48,19 +49,37 @@ FIELDS_STR <- paste(FIELDS, collapse = ",")
 
 
 # ------------------------------------------------------------
-# 2. Execute Analysis Pipeline
+# Section 2: Raw data and Quality Assessment
 # ------------------------------------------------------------
-# Step 1: Load data
 df_raw <- load_scorecard_data(api_key = API_KEY, fields_str = FIELDS_STR)
 
-# Step 2: Clean data
+message("\n--- Running Data Quality Assessment ---")
+assessment_results <- perform_data_assessment(df_raw)
+
+# Ensure output directory exists
+if (!dir.exists("output")) { dir.create("output") }
+
+# Save assessment results to the output folder
+write.csv(assessment_results$quality_summary, "output/data_quality_summary.csv", row.names = FALSE)
+write.csv(assessment_results$quality_issues, "output/data_quality_issues.csv", row.names = FALSE)
+
+# Print a quick summary to the console
+cat("Data Assessment Complete.\n")
+cat(" - Total duplicate rows found:", assessment_results$total_duplicates, "\n")
+cat(" - Variables with potential issues:", nrow(assessment_results$quality_issues), "\n")
+cat(" - Full report saved to 'output/data_quality_summary.csv'\n")
+
+# ------------------------------------------------------------
+# Section 3: Feature Engineering & Analysis
+# ------------------------------------------------------------
+# Clean the data
 df_clean <- clean_scorecard_data(df_raw)
 
-# Step 3: Define and add comparison groups
+# Add comparison groups for analysis
 df_final <- add_comparison_groups(df_clean)
 
 # ------------------------------------------------------------
-# 3. Descriptive Analysis (Output to Console)
+# Section 4: Generate and Save Visualizations
 # ------------------------------------------------------------
 message("\n--- Descriptive Analysis Summary ---")
 # Calculate and print group means
@@ -75,10 +94,6 @@ group_means <- df_final %>%
   )
 print(group_means)
 
-
-# ------------------------------------------------------------
-# 4. Generate and Save Visualizations
-# ------------------------------------------------------------
 message("\n--- Generating Plots ---")
 # Ensure the 'output' directory exists
 if (!dir.exists("output")) {
