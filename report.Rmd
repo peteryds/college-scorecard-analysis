@@ -101,7 +101,13 @@ When examining cost-benefit ratios, Private Nonprofit schools cost 2.1 times mor
 
 ### SAT Score Distribution
 
-This box plot illustrates the distribution of SAT scores for each group. The median and overall range for the Ivy League are significantly higher than for other groups.
+This box plot illustrates the distribution of SAT scores for each group, revealing distinct patterns in selectivity and consistency. The Ivy League stands apart with both the highest scores and the tightest distribution - the box is extremely narrow around 1520-1560, indicating remarkable consistency in student quality with minimal variation between schools.
+
+Private Nonprofit institutions show the widest distribution, with a median around 1200 but scores spanning from below 900 to over 1400. This enormous variation reflects the diversity within this category, from highly selective private colleges to less competitive institutions. The heavy clustering of individual data points (shown as gray dots) reveals hundreds of schools across this spectrum.
+
+Florida Public universities have a median SAT score of approximately 1140, slightly above the Public National median of 1120. However, both groups show considerable spread, with Florida Public displaying several high-performing outliers reaching 1400+. New College of Florida appears as a single horizontal line at 1137, representing its status as the sole school in that category.
+
+The "Other" category shows the lowest median scores (around 1095) and a more compressed distribution, with fewer high-performing outliers compared to the public and private nonprofit categories. The overlapping distributions between most groups (except Ivy League) suggest that institutional type alone doesn't fully determine academic selectivity - there are high-performing schools across all categories.
 
 ```{r plot-sat}
 plot_sat_boxplot(df_final)
@@ -109,15 +115,35 @@ plot_sat_boxplot(df_final)
 
 ### Median Net Price Comparison
 
-This bar chart compares the median net price across groups. Public universities in Florida and nationwide appear to provide the most cost-effective options.Students at the New College of Florida receive an unusual amount of scholarships, thus accounting for the low average price. 
+This bar chart reveals dramatic cost disparities across institution types, creating three distinct affordability tiers. New College of Florida stands out as exceptionally affordable at just $4,536 - less than half the cost of any other category. This extraordinary value reflects the institution's generous scholarship programs, making it the most accessible option by far.
+
+Public universities form the second tier, with Public National ($9,388) and Florida Public ($9,971) institutions offering nearly identical median prices around $9,700. Notably, Florida Public schools cost only $583 more than the national public average despite the state's higher cost of living, suggesting efficient state funding mechanisms. Both public categories provide education at roughly one-third the cost of Ivy League institutions.
+
+A substantial price gap separates public from private options. The "Other" category ($19,078) costs approximately double the public university rate, while Private Nonprofit institutions ($21,344) charge 2.3 times more than their public counterparts - a premium of roughly $11,400 annually. This $2,266 difference between "Other" and Private Nonprofit schools is relatively modest compared to the larger gaps in the data.
+
+Ivy League schools command the highest median net price at $27,195, representing a $5,851 premium over Private Nonprofit institutions and nearly three times the cost of public universities. Despite their substantial endowments and need-based aid programs, Ivy League schools remain the most expensive option after financial aid is applied, though this cost must be weighed against their superior outcomes in graduation rates (96.2%) and earnings ($102,655).
+
+The chart demonstrates that institutional category is the strongest predictor of college affordability, with the public-private divide creating cost differences exceeding $10,000 annually. For students prioritizing affordability, public institutions - particularly New College of Florida - offer dramatically lower price points that can reduce or eliminate student debt burdens.
 
 ```{r plot-price}
 plot_net_price_barchart(df_final)
 ```
 
+
 ### Graduation Rate Comparison
 
-Graduation rate is a key indicator of institutional success. Ivy League schools have the highest mean graduation rate, reflecting strong academic support and student quality.
+Graduation rate serves as a critical indicator of institutional effectiveness and student support quality, and this chart reveals stark disparities in American higher education.
+
+Ivy League institutions lead at 96.2%, reflecting their combination of highly selective admissions (SAT scores around 1539), substantial resources, and comprehensive student support systems. Nearly every enrolled student completes their degree.
+
+Florida Public universities significantly outperform expectations at 67.6%, ranking second overall with a 23-percentage-point advantage over the national public average. This suggests effective state policies and retention strategies. Notably, they exceed Private Nonprofit institutions (56.5%) by 11.1 points despite fewer resources per student.
+
+The middle tier clusters around 60% - "Other" (63.9%), New College of Florida (62.2%), and Private Nonprofit (56.5%). The Private Nonprofit underperformance is particularly surprising given their $21,344 price tag, indicating higher tuition doesn't guarantee better completion rates.
+
+Most concerning is the Public National category at just 44.6%, meaning more than half of students never complete their degrees despite investing time and accumulating debt. The 51.6 percentage point gap between Ivy League and Public National schools reveals a two-tiered system where outcomes are heavily stratified by institutional type and student socioeconomic background.
+
+Florida Public's success demonstrates that with adequate funding and institutional commitment, public universities can achieve substantially higher graduation rates, suggesting these gaps are policy-addressable rather than inevitable.
+
 
 ```{r plot-grad-rate}
 plot_grad_rate_barchart(df_final)
