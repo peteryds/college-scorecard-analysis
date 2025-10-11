@@ -1,0 +1,124 @@
+---
+title: "U.S. College Scorecard Analysis Report"
+author: "Peter, Matt, Maria"
+date: "`r format(Sys.time(), '%Y-%m-%d')`"
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+    theme: united
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, fig.width = 10, fig.height = 7)
+
+# Load required packages
+suppressPackageStartupMessages({
+  library(dotenv)
+  library(dplyr)
+  library(ggplot2)
+  library(knitr)
+  library(scales)
+})
+
+# Load custom functions
+source("R/load_data.R")
+source("R/clean_data.R")
+source("R/define_groups.R")
+source("R/visualizations.R")
+
+# Load environment variables from .env file
+load_dot_env()
+API_KEY <- Sys.getenv("API_KEY")
+
+# Set parameters
+# Note: If main.R has already been run, this report will use the cached data
+# from the /data directory, and the API key is not strictly needed.
+FIELDS <- c(
+  "id", "school.name", "school.state", "school.city", "school.ownership",
+  "latest.admissions.sat_scores.average.overall",
+  "latest.cost.tuition.in_state", "latest.cost.tuition.out_of_state",
+  "latest.cost.avg_net_price.overall",
+  "latest.completion.rate_suppressed.overall",
+  "latest.earnings.10_yrs_after_entry.median",
+  "latest.aid.median_debt.completers.overall"
+)
+FIELDS_STR <- paste(FIELDS, collapse = ",")
+
+# Execute the data processing pipeline
+df_raw <- load_scorecard_data(api_key = API_KEY, fields_str = FIELDS_STR)
+df_clean <- clean_scorecard_data(df_raw)
+df_final <- add_comparison_groups(df_clean)
+```
+
+## Introduction
+
+This project analyzes public data from the U.S. College Scorecard to explore differences between various types of universities in terms of academic performance, cost-effectiveness, and graduate earnings. We focus on the following comparison groups:
+
+-   **Ivy League**
+-   **Florida Public**
+-   **New College of Florida**
+-   **Private Nonprofit (National)**
+-   **Public (National)**
+
+## Descriptive Statistics
+
+First, we calculate the average values for several key metrics across each group to get a preliminary overview.
+
+```{r summary-table}
+group_means <- df_final %>%
+  group_by(group_label) %>%
+  summarize(
+    `Number of Schools` = n(),
+    `Mean SAT` = round(mean(sat_avg, na.rm = TRUE)),
+    `Mean Net Price` = dollar(mean(net_price, na.rm = TRUE)),
+    `Mean Grad. Rate` = percent(mean(grad_rate, na.rm = TRUE), accuracy = 0.1),
+    `Mean 10-Yr Earnings` = dollar(mean(earn10, na.rm = TRUE))
+  ) %>%
+  arrange(desc(`Mean SAT`))
+
+kable(group_means, caption = "Key Metric Averages by Comparison Group")
+```
+
+The table shows that Ivy League schools lead in SAT scores and post-graduation earnings, but also have the highest net price. Public universities, in contrast, offer a much lower net price.
+
+## Visual Analysis
+
+### SAT Score Distribution
+
+This box plot illustrates the distribution of SAT scores for each group. The median and overall range for the Ivy League are significantly higher than for other groups.
+
+```{r plot-sat}
+plot_sat_boxplot(df_final)
+```
+
+### Median Net Price Comparison
+
+This bar chart compares the median net price across groups. Public universities in Florida and nationwide appear to provide the most cost-effective options.
+
+```{r plot-price}
+plot_net_price_barchart(df_final)
+```
+
+### Graduation Rate Comparison
+
+Graduation rate is a key indicator of institutional success. Ivy League schools have the highest mean graduation rate, reflecting strong academic support and student quality.
+
+```{r plot-grad-rate}
+plot_grad_rate_barchart(df_final)
+```
+
+### Post-Graduation Earnings vs. Net Price
+
+This scatter plot explores the return on investment in education. The x-axis represents the net price, the y-axis shows median earnings 10 years after entry, and the size of each point corresponds to the graduation rate.
+
+```{r plot-scatter, fig.height=8}
+plot_earnings_scatterplot(df_final)
+```
+
+As seen in the chart, while Ivy League schools (red points) are more expensive, their graduates also tend to have the highest earnings, suggesting a strong return on investment.
+
+## Conclusion
+
+Through this modular analysis pipeline, we have clearly compared the performance of different university groups. The analysis reveals strong correlations between school type, cost, and the future success of their students.

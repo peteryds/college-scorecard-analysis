@@ -47,3 +47,13 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+
+# .env
+.env
+
+# Data and output folders
+/data/
+/output/
+
+# R packages folder
+/renv/
