@@ -4,13 +4,18 @@ author: "Peter, Matt, Maria"
 date: "`r format(Sys.time(), '%Y-%m-%d')`"
 output:
   html_document:
-    toc: yes
-    toc_float: yes
+    toc: true
+    toc_float: true
     theme: united
     code_folding: hide
+  pdf_document:
+    toc: true
+  word_document:
+    toc: true
 ---
 
 ```{r setup, include=FALSE}
+
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, fig.width = 10, fig.height = 7)
 
 # Load required packages
@@ -121,9 +126,9 @@ As seen in the chart, while Ivy League schools (red points) are more expensive, 
 
 ### TOP 50 colleges Earnings-to-Net-Price
 
-```{r plot-map}
-print(p_map)
-```
+<!-- ```{r plot-map} -->
+<!-- print(p_map) -->
+<!-- ``` -->
 As seen in the above map, certain areas of the country are more likely than others to include top ROI performing schools. California and Georgia are notable in regards to this metric. 
 
 ## Conclusion

@@ -197,70 +197,70 @@ plot_earnings_scatterplot <- function(df) {
     theme(plot.margin = margin(10, 20, 10, 10))
 }
 
-suppressPackageStartupMessages({
-  library(dplyr)
-  library(ggplot2)
-  library(scales)
-  library(usmap)
-})
-
-# --- Helper: coerce state to 2-letter abbreviations (accepts full names or abbr) ---
-to_abbr <- function(x) {
-  x <- trimws(x)
-  out <- toupper(x)
-  full_lower <- tolower(x)
-  mi <- match(full_lower, tolower(state.name))
-  out[!is.na(mi)] <- state.abb[mi[!is.na(mi)]]
-  out[grepl("^washington\\s*d\\.?c\\.?$|^district of columbia$", full_lower)] <- "DC"
-  out
-}
-
-# --- Ensure the input exists and metric is present ---
-if (!exists("df_final")) stop("df_final not found in environment.")
-if (!"earnings_to_net" %in% names(df_final)) stop("df_final$earnings_to_net not found.")
-
-# --- Rank by earnings_to_net and take Top 50 ---
-top50 <- df_final %>%
-  filter(!is.na(earnings_to_net)) %>%
-  slice_max(order_by = earnings_to_net, n = 50, with_ties = FALSE)
-
-# Graceful no-data fallback
-if (nrow(top50) == 0) {
-  plot.new(); text(0.5, 0.5, "No rows with earnings_to_net found.", cex = 1.2)
-} else {
-  # Find the state column
-  state_col <- dplyr::case_when(
-    "state"        %in% names(top50) ~ "state",
-    "school_state" %in% names(top50) ~ "school_state",
-    "school.state" %in% names(top50) ~ "school.state",
-    TRUE ~ NA_character_
-  )
-  if (is.na(state_col)) stop("No state column found (expected one of: state, school_state, school.state).")
-  
-  # Count Top-50 per state; usmap needs a column literally named 'state' or 'fips'
-  state_counts <- top50 %>%
-    mutate(state = to_abbr(.data[[state_col]])) %>%
-    filter(!is.na(state), state %in% c(state.abb, "DC")) %>%
-    count(state, name = "num_top50")
-  
-  # If nothing matched valid states, show a friendly note
-  if (nrow(state_counts) == 0) {
-    plot.new(); text(0.5, 0.5, "No Top-50 rows mapped to valid US states.", cex = 1.2)
-  } else {
-    # Build and PRINT the plot (ensures it renders in R Markdown)
-    p_map <- plot_usmap(data = state_counts, values = "num_top50", color = "white") +
-      scale_fill_continuous(
-        low = "lightblue", high = "darkblue",
-        na.value = "gray95",
-        name = "Top-50 (earnings/net)", labels = comma
-      ) +
-      labs(
-        title = "Where the Top 50 Colleges Are (by Earnings-to-Net-Price)",
-        subtitle = "Count of top-50 colleges by state, ranked using df_final$earnings_to_net",
-        x = NULL, y = NULL
-      ) +
-      theme(legend.position = "right")
-    
-    print(p_map)  # <-- explicit print so it shows up in outputs
-  }
-}
+# suppressPackageStartupMessages({
+#   library(dplyr)
+#   library(ggplot2)
+#   library(scales)
+#   library(usmap)
+# })
+# 
+# # --- Helper: coerce state to 2-letter abbreviations (accepts full names or abbr) ---
+# to_abbr <- function(x) {
+#   x <- trimws(x)
+#   out <- toupper(x)
+#   full_lower <- tolower(x)
+#   mi <- match(full_lower, tolower(state.name))
+#   out[!is.na(mi)] <- state.abb[mi[!is.na(mi)]]
+#   out[grepl("^washington\\s*d\\.?c\\.?$|^district of columbia$", full_lower)] <- "DC"
+#   out
+# }
+# 
+# # --- Ensure the input exists and metric is present ---
+# if (!exists("df_final")) stop("df_final not found in environment.")
+# if (!"earnings_to_net" %in% names(df_final)) stop("df_final$earnings_to_net not found.")
+# 
+# # --- Rank by earnings_to_net and take Top 50 ---
+# top50 <- df_final %>%
+#   filter(!is.na(earnings_to_net)) %>%
+#   slice_max(order_by = earnings_to_net, n = 50, with_ties = FALSE)
+# 
+# # Graceful no-data fallback
+# if (nrow(top50) == 0) {
+#   plot.new(); text(0.5, 0.5, "No rows with earnings_to_net found.", cex = 1.2)
+# } else {
+#   # Find the state column
+#   state_col <- dplyr::case_when(
+#     "state"        %in% names(top50) ~ "state",
+#     "school_state" %in% names(top50) ~ "school_state",
+#     "school.state" %in% names(top50) ~ "school.state",
+#     TRUE ~ NA_character_
+#   )
+#   if (is.na(state_col)) stop("No state column found (expected one of: state, school_state, school.state).")
+#   
+#   # Count Top-50 per state; usmap needs a column literally named 'state' or 'fips'
+#   state_counts <- top50 %>%
+#     mutate(state = to_abbr(.data[[state_col]])) %>%
+#     filter(!is.na(state), state %in% c(state.abb, "DC")) %>%
+#     count(state, name = "num_top50")
+#   
+#   # If nothing matched valid states, show a friendly note
+#   if (nrow(state_counts) == 0) {
+#     plot.new(); text(0.5, 0.5, "No Top-50 rows mapped to valid US states.", cex = 1.2)
+#   } else {
+#     # Build and PRINT the plot (ensures it renders in R Markdown)
+#     p_map <- plot_usmap(data = state_counts, values = "num_top50", color = "white") +
+#       scale_fill_continuous(
+#         low = "lightblue", high = "darkblue",
+#         na.value = "gray95",
+#         name = "Top-50 (earnings/net)", labels = comma
+#       ) +
+#       labs(
+#         title = "Where the Top 50 Colleges Are (by Earnings-to-Net-Price)",
+#         subtitle = "Count of top-50 colleges by state, ranked using df_final$earnings_to_net",
+#         x = NULL, y = NULL
+#       ) +
+#       theme(legend.position = "right")
+#     
+#     print(p_map)  # <-- explicit print so it shows up in outputs
+#   }
+# }
