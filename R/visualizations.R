@@ -88,25 +88,176 @@ plot_grad_rate_barchart <- function(df) {
 #' Create a scatter plot of earnings vs. net price
 #' @param df The analysis-ready data frame.
 #' @return A ggplot object.
+#' 
 plot_earnings_scatterplot <- function(df) {
+  library(dplyr)
+  library(stringr)
+  library(ggplot2)
+  library(ggrepel)
+  library(grid)
+  
   earn_df <- df %>%
-    dplyr::filter(!is.na(earn10), !is.na(net_price), !is.na(group_label), !is.na(grad_rate))
+    filter(!is.na(earn10), !is.na(net_price), !is.na(group_label), !is.na(grad_rate))
   
-  highlight_df <- earn_df %>% dplyr::filter(is_ivy | is_ncf)
+  # Always label NCF
+  ncf_df <- earn_df %>%
+    filter(grepl("new college of florida", name, ignore.case = TRUE)) %>%
+    slice_head(n = 1)
   
-  ggplot2::ggplot(earn_df, ggplot2::aes(x = net_price, y = earn10, color = group_label, size = grad_rate)) +
-    ggplot2::geom_point(alpha = 0.65) +
-    ggrepel::geom_text_repel(data = highlight_df, ggplot2::aes(label = name),
-                             size = 3.2, max.overlaps = 50, show.legend = FALSE) +
-    ggplot2::scale_color_manual(values = GROUP_PALETTE) +
-    ggplot2::scale_size_continuous(range = c(2, 8), labels = scales::percent) +
-    ggplot2::scale_x_continuous(labels = scales::dollar) +
-    ggplot2::scale_y_continuous(labels = scales::dollar) +
-    ggplot2::labs(
+  # Categorize for top-3 selection
+  pool <- earn_df %>%
+    mutate(
+      .cat = case_when(
+        str_detect(str_to_lower(group_label), "florida") ~ "Florida Public",
+        str_detect(str_to_lower(group_label), "private") ~ "Private",
+        str_detect(str_to_lower(group_label), "public")  ~ "Public",
+        TRUE ~ NA_character_
+      )
+    )
+  
+  # Top-3 per category (Public, Private, Florida Public)
+  top3_main <- pool %>%
+    filter(.cat %in% c("Public", "Private", "Florida Public")) %>%
+    group_by(.cat) %>%
+    slice_max(order_by = earn10, n = 3, with_ties = FALSE) %>%
+    ungroup() %>%
+    select(-.cat)
+  
+  # ✅ Correct Ivy selection (vectorized & robust)
+  ivy_rows <- earn_df %>%
+    filter(
+      # prefer boolean flag if present
+      (is.logical(is_ivy) & !is.na(is_ivy) & is_ivy) |
+        # fallback: group label contains "ivy"
+        str_detect(str_to_lower(group_label), "ivy")
+    )
+  
+  top3_ivy <- ivy_rows %>%
+    slice_max(order_by = earn10, n = 3, with_ties = FALSE)
+  
+  # Labels to draw = top3 per bucket + top3 Ivy (EXCLUDING NCF to avoid duplicate)
+  label_df_main <- bind_rows(top3_main, top3_ivy) %>%
+    filter(!grepl("new college of florida", name, ignore.case = TRUE)) %>%
+    distinct(name, .keep_all = TRUE)
+  
+  ggplot(
+    earn_df,
+    aes(x = net_price, y = earn10, color = group_label, size = grad_rate)
+  ) +
+    geom_point(alpha = 0.65) +
+    
+    # Labels for selected schools (group-colored fill @ 50% alpha, black text)
+    ggrepel::geom_label_repel(
+      data = label_df_main,
+      aes(label = name, fill = group_label),
+      color = "black",
+      label.size = 0.25,
+      label.r = unit(0.1, "lines"),
+      label.padding = unit(0.15, "lines"),
+      size = 3.2,
+      max.overlaps = 200,
+      show.legend = FALSE
+    ) +
+    
+    # Distinct NCF point + bold label (same group-colored fill @ 50% alpha)
+    geom_point(
+      data = ncf_df,
+      shape = 21, stroke = 0.8, fill = "white", size = 3, inherit.aes = FALSE,
+      aes(x = net_price, y = earn10, color = group_label)
+    ) +
+    ggrepel::geom_label_repel(
+      data = ncf_df,
+      aes(label = name, fill = group_label),
+      color = "black",
+      fontface = "bold",
+      label.size = 0.3,
+      label.r = unit(0.12, "lines"),
+      label.padding = unit(0.18, "lines"),
+      max.overlaps = Inf,
+      min.segment.length = 0,
+      size = 3.6,
+      show.legend = FALSE
+    ) +
+    
+    # color = points; fill = labels (same palette, but labels are alpha=0.5)
+    scale_color_manual(values = GROUP_PALETTE) +
+    scale_fill_manual(values = scales::alpha(GROUP_PALETTE, 0.5)) +
+    
+    scale_size_continuous(range = c(0.2, 0.8), labels = scales::percent) +
+    scale_x_continuous(labels = scales::dollar) +
+    scale_y_continuous(labels = scales::dollar) +
+    labs(
       title = "Post-Graduation Earnings vs. Net Price",
-      subtitle = "Point size is scaled by graduation rate",
+      subtitle = "Top-3 labeled per category (Public, Private, Florida Public, Ivy) + New College of Florida",
       x = "Median Net Price", y = "Median Earnings 10-Yrs After Entry",
       color = "Group", size = "Graduation Rate"
     ) +
-    ggplot2::theme_minimal(base_size = 13)
+    coord_cartesian(clip = "off") +
+    theme_minimal(base_size = 13) +
+    theme(plot.margin = margin(10, 20, 10, 10))
 }
+
+# State locations of TOP 25 colleges 
+# Self-contained code to plot where the Top-25 colleges are (by 10-yr earnings)
+suppressPackageStartupMessages({
+  library(dplyr)
+  library(ggplot2)
+  library(scales)
+})
+
+# Ensure map data is available
+if (!requireNamespace("maps", quietly = TRUE)) install.packages("maps")
+library(maps)  # ggplot2::map_data("state") relies on this
+
+# ---- 1) Pick the ranking metric and take Top 25 ----
+ranking_metric <- "earn10"
+
+stopifnot(ranking_metric %in% names(df_final))
+top25 <- df_final %>%
+  filter(!is.na(.data[[ranking_metric]])) %>%
+  slice_max(order_by = .data[[ranking_metric]], n = 25, with_ties = FALSE)
+
+# ---- 2) Normalize state names (map US postal → full state name) ----
+# Determine which column holds the 2-letter state code
+state_col <- if ("state" %in% names(top25)) "state" else if ("school_state" %in% names(top25)) "school_state" else "school.state"
+if (!state_col %in% names(top25)) stop("Could not find a state column ('state', 'school_state', or 'school.state').")
+
+state_xwalk <- tibble::tibble(
+  abbr = state.abb,
+  full = tolower(state.name)
+) %>%
+  # Optionally include DC if present in your data (map_data('state') does not include DC)
+  bind_rows(tibble::tibble(abbr = "DC", full = "district of columbia"))
+
+state_counts <- top25 %>%
+  mutate(state_abbr = toupper(.data[[state_col]])) %>%
+  left_join(state_xwalk, by = c("state_abbr" = "abbr")) %>%
+  # Drop rows that didn't match to a state polygon (e.g., PR/DC not in map_data('state'))
+  filter(!is.na(full)) %>%
+  count(full, name = "num_top25")
+
+# ---- 3) Build choropleth dataset ----
+us_polys <- ggplot2::map_data("state") %>% as_tibble()  # columns: long, lat, group, order, region, subregion
+plot_df <- us_polys %>%
+  left_join(state_counts, by = c("region" = "full"))
+
+# ---- 4) Plot choropleth: where the Top-25 are located ----
+ggplot(plot_df, aes(long, lat, group = group, fill = num_top25)) +
+  geom_polygon(color = "white", linewidth = 0.3) +
+  coord_fixed(1.3) +
+  scale_fill_gradient(
+    low = "lightblue", high = "darkblue",
+    na.value = "gray95",
+    name = "Top-25 Colleges",
+    labels = label_number(accuracy = 1)
+  ) +
+  labs(
+    title = "Where the Top 25 Colleges Are Located",
+    subtitle = "Count of Top-25 colleges by state (ranked by median 10-year earnings)",
+    x = NULL, y = NULL
+  ) +
+  theme_void(base_size = 12) +
+  theme(
+    legend.position = "right",
+    plot.title = element_text(face = "bold")
+  )
