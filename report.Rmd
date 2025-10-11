@@ -163,4 +163,14 @@ As seen in the chart, while Ivy League schools (red points) are more expensive, 
 
 ## Conclusion
 
-Through this modular analysis pipeline, we have clearly compared the performance of different university groups. The analysis reveals strong correlations between school type, cost, and the future success of their students.
+This analysis reveals that the relationship between college cost and outcomes is more complex than simple price tags suggest. Three key insights emerge for prospective students and policymakers:
+
+**First, institutional type matters, but not always in predictable ways.** Florida Public universities emerge as the standout value proposition, delivering earnings outcomes ($55,776) that exceed Private Nonprofit schools ($53,786) at less than half the cost. This 23-percentage-point graduation rate advantage over other public institutions (67.6% vs 44.6%) demonstrates that public universities can achieve excellence with adequate state investment and institutional commitment.
+
+**Second, the private premium requires scrutiny.** Private Nonprofit institutions charge 2.1 times more than public universities but deliver only 19% higher earnings while posting surprisingly low graduation rates (56.5%). For students prioritizing financial outcomes, this premium is difficult to justify. The "Other" category presents an even worse value proposition - charging $20,228 while producing the lowest earnings ($33,159) of any group.
+
+**Third, the completion crisis at Public National institutions (44.6% graduation rate) represents the most urgent policy challenge.** With millions of students leaving without degrees but with debt, this system failure perpetuates inequality and wastes human capital. Florida's success proves improvement is achievable through policy intervention.
+
+**For prospective students:** Consider Florida Public universities for exceptional value, target Ivy League schools only if financial aid brings costs down significantly, and approach Private Nonprofit institutions with caution unless they offer specialized programs or networks justifying the premium. New College of Florida offers remarkable affordability for Florida residents willing to accept slightly lower earnings potential.
+
+**For policymakers:** The data suggests that increased investment in public higher education, modeled on Florida's apparent success, could dramatically improve national graduation rates and educational equity while maintaining affordability. The cost of inaction - measured in incomplete degrees and lost economic potential - far exceeds the investment required.
