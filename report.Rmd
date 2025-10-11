@@ -77,6 +77,7 @@ group_means <- df_final %>%
   summarize(
     `Number of Schools` = n(),
     `Mean SAT` = round(mean(sat_avg, na.rm = TRUE)),
+    ` ` = "",  # Empty column for spacing
     `Mean Net Price` = dollar(mean(net_price, na.rm = TRUE)),
     `Mean Grad. Rate` = percent(mean(grad_rate, na.rm = TRUE), accuracy = 0.1),
     `Mean 10-Yr Earnings` = dollar(mean(earn10, na.rm = TRUE))
@@ -85,15 +86,15 @@ group_means <- df_final %>%
 
 kable(group_means, caption = "Key Metric Averages by Comparison Group")
 ```
-
+## 
 
 The table reveals several important patterns across institution types. Ivy League schools lead in SAT scores (1539) and post-graduation earnings ($102,655), but also have the highest net price ($24,262). 
 
 Notably, Florida Public universities demonstrate exceptional value - despite having similar SAT scores to Private Nonprofit schools (1193 vs 1202), their graduates actually earn more ($55,776 vs $53,786), while charging less than half the price. This suggests strong return on investment, possibly driven by Florida's robust job market.
 
-Graduation rates show stark inequality across sectors. Ivy League schools graduate 96.2% of students, while Public National institutions graduate only 44.6% - meaning more than half of students at typical public universities don't complete their degrees. This 51.6 percentage point gap represents a significant equity challenge in higher education.
+Graduation rates show stark inequality across sectors. Ivy League schools graduate 96.2% of students, while Public National institutions graduate only 44.6% - meaning more than half of students at typical public universities don't complete their degrees. People in Ivy League schools may be more committed to their education due to prestige and higher earning potential. This 51.6 percentage point gap represents a significant equity challenge in higher education.
 
-The "Other" category presents the poorest value proposition, charging nearly as much as Private Nonprofit institutions ($20,228) while producing the lowest earnings outcomes ($33,159). Meanwhile, New College of Florida stands out for affordability at just $4,536 - less than half the cost of other public universities - while still delivering respectable earnings of $48,082.
+The "Other" category presents the poorest value proposition, charging nearly as much as Private Nonprofit institutions ($20,228) while producing the lowest earnings outcomes ($33,159). Meanwhile, New College of Florida stands out for affordability at just $4,536 - less than half the cost of other public universities - while still delivering respectable earnings of $48,082. This relatively low earnings for New College is likely explained by the previous administration's focus on gender studies and other such courses. 
 
 When examining cost-benefit ratios, Private Nonprofit schools cost 2.1 times more than Public schools but deliver only 19% higher earnings, suggesting the private premium may not justify the additional expense for many students focused on earnings potential.
 
@@ -117,7 +118,7 @@ plot_sat_boxplot(df_final)
 
 This bar chart reveals dramatic cost disparities across institution types, creating three distinct affordability tiers. New College of Florida stands out as exceptionally affordable at just $4,536 - less than half the cost of any other category. This extraordinary value reflects the institution's generous scholarship programs, making it the most accessible option by far.
 
-Public universities form the second tier, with Public National ($9,388) and Florida Public ($9,971) institutions offering nearly identical median prices around $9,700. Notably, Florida Public schools cost only $583 more than the national public average despite the state's higher cost of living, suggesting efficient state funding mechanisms. Both public categories provide education at roughly one-third the cost of Ivy League institutions.
+Public universities form the second tier, with Public National ($9,388) and Florida Public ($9,971) institutions offering nearly identical median prices around $9,700. Both public categories provide education at roughly one-third the cost of Ivy League institutions.
 
 A substantial price gap separates public from private options. The "Other" category ($19,078) costs approximately double the public university rate, while Private Nonprofit institutions ($21,344) charge 2.3 times more than their public counterparts - a premium of roughly $11,400 annually. This $2,266 difference between "Other" and Private Nonprofit schools is relatively modest compared to the larger gaps in the data.
 
@@ -159,11 +160,6 @@ plot_earnings_scatterplot(df_final)
 
 As seen in the chart, while Ivy League schools (red points) are more expensive, their graduates also tend to have the highest earnings, suggesting a strong return on investment.
 
-### TOP 50 colleges Earnings-to-Net-Price
-
-<!-- ```{r plot-map} -->
-<!-- print(p_map) -->
-<!-- ``` -->
 
 ## Conclusion
 
