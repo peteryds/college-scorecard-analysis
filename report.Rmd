@@ -95,7 +95,7 @@ plot_sat_boxplot(df_final)
 
 ### Median Net Price Comparison
 
-This bar chart compares the median net price across groups. Public universities in Florida and nationwide appear to provide the most cost-effective options.
+This bar chart compares the median net price across groups. Public universities in Florida and nationwide appear to provide the most cost-effective options.Students at the New College of Florida receive an unusual amount of scholarships, thus accounting for the low average price. 
 
 ```{r plot-price}
 plot_net_price_barchart(df_final)
@@ -119,9 +119,12 @@ plot_earnings_scatterplot(df_final)
 
 As seen in the chart, while Ivy League schools (red points) are more expensive, their graduates also tend to have the highest earnings, suggesting a strong return on investment.
 
+### TOP 50 colleges Earnings-to-Net-Price
+
 ```{r plot-map}
 print(p_map)
 ```
+As seen in the above map, certain areas of the country are more likely than others to include top ROI performing schools. California and Georgia are notable in regards to this metric. 
 
 ## Conclusion
 
