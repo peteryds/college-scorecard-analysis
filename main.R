@@ -105,11 +105,13 @@ p_sat <- plot_sat_boxplot(df_final)
 p_price <- plot_net_price_barchart(df_final)
 p_grad <- plot_grad_rate_barchart(df_final)
 p_scatter <- plot_earnings_scatterplot(df_final)
+# p_map <- print(p_map)
 
 # Save plots to file
 ggsave("output/sat_scores_by_group.png", p_sat, width = 10, height = 7)
 ggsave("output/net_price_by_group.png", p_price, width = 10, height = 7)
 ggsave("output/grad_rate_by_group.png", p_grad, width = 10, height = 7)
 ggsave("output/earnings_vs_price_scatter.png", p_scatter, width = 11, height = 8)
+# ggsave("output/map.png", p_map, width = 11, height = 8)
 
 message("✅ All plots have been saved to the 'output/' directory!")
