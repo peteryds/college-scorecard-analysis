@@ -1,6 +1,6 @@
 ---
 title: "U.S. College Scorecard Analysis Report"
-author: "Peter, Matt, Maria"
+author: "Matthew, Yu-Hsin, Maria"
 date: "`r format(Sys.time(), '%Y-%m-%d')`"
 output:
   html_document:
