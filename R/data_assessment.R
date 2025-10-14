@@ -118,7 +118,7 @@ perform_data_assessment <- function(df) {
    
    expected_categories <- list(
      control = c(1, 2, 3), # diferent values for control
-     state = state.abb #State comparision vs state abreviations
+     state = state.abb #State comparison vs state abbreviations
    )
    
 # 11. Create quality summary with statistical summary
