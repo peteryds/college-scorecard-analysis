@@ -57,7 +57,7 @@ Follow these steps to get the project running on your local machine.
 Open your terminal or command prompt and clone the repository:
 
 ``` bash
-git clone <https://github.com/peteryds/college-scorecard-analysis.git>
+git clone https://github.com/peteryds/college-scorecard-analysis.git
 
 cd college-scorecard-analysis
 ```
