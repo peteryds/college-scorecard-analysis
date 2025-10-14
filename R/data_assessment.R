@@ -97,7 +97,7 @@ perform_data_assessment <- function(df) {
    
 # 10. Updated Numeric Ranges & expected values for categorical variables
    numeric_ranges <- list(
-     tuition_in = c(-10000, 100000),        # small negative allowed for scholarships, grants and aids
+     tuition_in = c(-10000, 100000),        # small negative allowed for scholarships, grants and aid
      tuition_out = c(-10000, 150000),
      earn10 = c(0, 500000),
      grad_rate = c(0, 1),
