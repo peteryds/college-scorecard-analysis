@@ -1,0 +1,176 @@
+---
+title: "U.S. College Scorecard Analysis Report"
+author: "Matthew, Yu-Hsin, Maria"
+date: "`r format(Sys.time(), '%Y-%m-%d')`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    theme: united
+    code_folding: hide
+  pdf_document:
+    toc: true
+  word_document:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, fig.width = 10, fig.height = 7)
+
+# Load required packages
+suppressPackageStartupMessages({
+  library(dotenv)
+  library(dplyr)
+  library(ggplot2)
+  library(knitr)
+  library(scales)
+})
+
+# Load custom functions
+source("R/load_data.R")
+source("R/clean_data.R")
+source("R/define_groups.R")
+source("R/visualizations.R")
+
+# Load environment variables from .env file
+load_dot_env()
+API_KEY <- Sys.getenv("API_KEY")
+
+# Set parameters
+# Note: If main.R has already been run, this report will use the cached data
+# from the /data directory, and the API key is not strictly needed.
+FIELDS <- c(
+  "id", "school.name", "school.state", "school.city", "school.ownership",
+  "latest.admissions.sat_scores.average.overall",
+  "latest.cost.tuition.in_state", "latest.cost.tuition.out_of_state",
+  "latest.cost.avg_net_price.overall",
+  "latest.completion.rate_suppressed.overall",
+  "latest.earnings.10_yrs_after_entry.median",
+  "latest.aid.median_debt.completers.overall"
+)
+FIELDS_STR <- paste(FIELDS, collapse = ",")
+
+# Execute the data processing pipeline
+df_raw <- load_scorecard_data(api_key = API_KEY, fields_str = FIELDS_STR)
+df_clean <- clean_scorecard_data(df_raw)
+df_final <- add_comparison_groups(df_clean)
+```
+
+## Introduction
+
+This project analyzes public data from the U.S. College Scorecard to explore differences between various types of universities in terms of academic performance, cost-effectiveness, and graduate earnings. We focus on the following comparison groups:
+
+-   **Ivy League**
+-   **Florida Public**
+-   **New College of Florida**
+-   **Private Nonprofit (National)**
+-   **Public (National)**
+
+## Descriptive Statistics
+
+First, we calculate the average values for several key metrics across each group to get a preliminary overview.
+
+```{r summary-table}
+group_means <- df_final %>%
+  group_by(group_label) %>%
+  summarize(
+    `Number of Schools` = n(),
+    `Mean SAT` = round(mean(sat_avg, na.rm = TRUE)),
+    ` ` = "",  # Empty column for spacing
+    `Mean Net Price` = dollar(mean(net_price, na.rm = TRUE)),
+    `Mean Grad. Rate` = percent(mean(grad_rate, na.rm = TRUE), accuracy = 0.1),
+    `Mean 10-Yr Earnings` = dollar(mean(earn10, na.rm = TRUE))
+  ) %>%
+  arrange(desc(`Mean SAT`))
+
+kable(group_means, caption = "Key Metric Averages by Comparison Group")
+```
+## 
+
+The table reveals several important patterns across institution types. Ivy League schools lead in SAT scores (1539) and post-graduation earnings ($102,655), but also have the highest net price ($24,262). 
+
+Notably, Florida Public universities demonstrate exceptional value - despite having similar SAT scores to Private Nonprofit schools (1193 vs 1202), their graduates actually earn more ($55,776 vs $53,786), while charging less than half the price. This suggests strong return on investment, possibly driven by Florida's robust job market.
+
+Graduation rates show stark inequality across sectors. Ivy League schools graduate 96.2% of students, while Public National institutions graduate only 44.6% - meaning more than half of students at typical public universities don't complete their degrees. People in Ivy League schools may be more committed to their education due to prestige and higher earning potential. This 51.6 percentage point gap represents a significant equity challenge in higher education.
+
+The "Other" category presents the poorest value proposition, charging nearly as much as Private Nonprofit institutions ($20,228) while producing the lowest earnings outcomes ($33,159). Meanwhile, New College of Florida stands out for affordability at just $4,536 - less than half the cost of other public universities - while still delivering respectable earnings of $48,082. This relatively low earnings for New College is likely explained by the previous administration's focus on gender studies and other such courses. 
+
+When examining cost-benefit ratios, Private Nonprofit schools cost 2.1 times more than Public schools but deliver only 19% higher earnings, suggesting the private premium may not justify the additional expense for many students focused on earnings potential.
+
+## Visual Analysis
+
+### SAT Score Distribution
+
+This box plot illustrates the distribution of SAT scores for each group, revealing distinct patterns in selectivity and consistency. The Ivy League stands apart with both the highest scores and the tightest distribution - the box is extremely narrow around 1520-1560, indicating remarkable consistency in student quality with minimal variation between schools.
+
+Private Nonprofit institutions show the widest distribution, with a median around 1200 but scores spanning from below 900 to over 1400. This enormous variation reflects the diversity within this category, from highly selective private colleges to less competitive institutions. The heavy clustering of individual data points (shown as gray dots) reveals hundreds of schools across this spectrum.
+
+Florida Public universities have a median SAT score of approximately 1140, slightly above the Public National median of 1120. However, both groups show considerable spread, with Florida Public displaying several high-performing outliers reaching 1400+. New College of Florida appears as a single horizontal line at 1137, representing its status as the sole school in that category.
+
+The "Other" category shows the lowest median scores (around 1095) and a more compressed distribution, with fewer high-performing outliers compared to the public and private nonprofit categories. The overlapping distributions between most groups (except Ivy League) suggest that institutional type alone doesn't fully determine academic selectivity - there are high-performing schools across all categories.
+
+```{r plot-sat}
+plot_sat_boxplot(df_final)
+```
+
+### Median Net Price Comparison
+
+This bar chart reveals dramatic cost disparities across institution types, creating three distinct affordability tiers. New College of Florida stands out as exceptionally affordable at just $4,536 - less than half the cost of any other category. This extraordinary value reflects the institution's generous scholarship programs, making it the most accessible option by far.
+
+Public universities form the second tier, with Public National ($9,388) and Florida Public ($9,971) institutions offering nearly identical median prices around $9,700. Both public categories provide education at roughly one-third the cost of Ivy League institutions.
+
+A substantial price gap separates public from private options. The "Other" category ($19,078) costs approximately double the public university rate, while Private Nonprofit institutions ($21,344) charge 2.3 times more than their public counterparts - a premium of roughly $11,400 annually. This $2,266 difference between "Other" and Private Nonprofit schools is relatively modest compared to the larger gaps in the data.
+
+Ivy League schools command the highest median net price at $27,195, representing a $5,851 premium over Private Nonprofit institutions and nearly three times the cost of public universities. Despite their substantial endowments and need-based aid programs, Ivy League schools remain the most expensive option after financial aid is applied, though this cost must be weighed against their superior outcomes in graduation rates (96.2%) and earnings ($102,655).
+
+The chart demonstrates that institutional category is the strongest predictor of college affordability, with the public-private divide creating cost differences exceeding $10,000 annually. For students prioritizing affordability, public institutions - particularly New College of Florida - offer dramatically lower price points that can reduce or eliminate student debt burdens.
+
+```{r plot-price}
+plot_net_price_barchart(df_final)
+```
+
+
+### Graduation Rate Comparison
+
+Graduation rate serves as a critical indicator of institutional effectiveness and student support quality, and this chart reveals stark disparities in American higher education.
+
+Ivy League institutions lead at 96.2%, reflecting their combination of highly selective admissions (SAT scores around 1539), substantial resources, and comprehensive student support systems. Nearly every enrolled student completes their degree.
+
+Florida Public universities significantly outperform expectations at 67.6%, ranking second overall with a 23-percentage-point advantage over the national public average. This suggests effective state policies and retention strategies. Notably, they exceed Private Nonprofit institutions (56.5%) by 11.1 points despite fewer resources per student.
+
+The middle tier clusters around 60% - "Other" (63.9%), New College of Florida (62.2%), and Private Nonprofit (56.5%). The Private Nonprofit underperformance is particularly surprising given their $21,344 price tag, indicating higher tuition doesn't guarantee better completion rates.
+
+Most concerning is the Public National category at just 44.6%, meaning more than half of students never complete their degrees despite investing time and accumulating debt. The 51.6 percentage point gap between Ivy League and Public National schools reveals a two-tiered system where outcomes are heavily stratified by institutional type and student socioeconomic background.
+
+Florida Public's success demonstrates that with adequate funding and institutional commitment, public universities can achieve substantially higher graduation rates, suggesting these gaps are policy-addressable rather than inevitable.
+
+
+```{r plot-grad-rate}
+plot_grad_rate_barchart(df_final)
+```
+
+### Post-Graduation Earnings vs. Net Price
+
+This scatter plot explores the return on investment in education. The x-axis represents the net price, the y-axis shows median earnings 10 years after entry, and the size of each point corresponds to the graduation rate.
+
+```{r plot-scatter, fig.height=8}
+plot_earnings_scatterplot(df_final)
+```
+
+As seen in the chart, while Ivy League schools (red points) are more expensive, their graduates also tend to have the highest earnings, suggesting a strong return on investment.
+
+
+## Conclusion
+
+This analysis reveals that the relationship between college cost and outcomes is more complex than simple price tags suggest. Three key insights emerge for prospective students and policymakers:
+
+**First, institutional type matters, but not always in predictable ways.** Florida Public universities emerge as the standout value proposition, delivering earnings outcomes ($55,776) that exceed Private Nonprofit schools ($53,786) at less than half the cost. This 23-percentage-point graduation rate advantage over other public institutions (67.6% vs 44.6%) demonstrates that public universities can achieve excellence with adequate state investment and institutional commitment.
+
+**Second, the private premium requires scrutiny.** Private Nonprofit institutions charge 2.1 times more than public universities but deliver only 19% higher earnings while posting surprisingly low graduation rates (56.5%). For students prioritizing financial outcomes, this premium is difficult to justify. The "Other" category presents an even worse value proposition - charging $20,228 while producing the lowest earnings ($33,159) of any group.
+
+**Third, the completion crisis at Public National institutions (44.6% graduation rate) represents the most urgent policy challenge.** With millions of students leaving without degrees but with debt, this system failure perpetuates inequality and wastes human capital. Florida's success proves improvement is achievable through policy intervention.
+
+**For prospective students:** Consider Florida Public universities for exceptional value, target Ivy League schools only if financial aid brings costs down significantly, and approach Private Nonprofit institutions with caution unless they offer specialized programs or networks justifying the premium. New College of Florida offers remarkable affordability for Florida residents willing to accept slightly lower earnings potential.
+
+**For policymakers:** The data suggests that increased investment in public higher education, modeled on Florida's apparent success, could dramatically improve national graduation rates and educational equity while maintaining affordability. The cost of inaction - measured in incomplete degrees and lost economic potential - far exceeds the investment required.
