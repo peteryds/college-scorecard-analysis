@@ -52,7 +52,6 @@ rsconnect/
 .env
 
 # Data and output folders
-/data/
 /output/
 
 # R packages folder
