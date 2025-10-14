@@ -92,7 +92,6 @@ perform_data_assessment <- function(df) {
      upper <- Q3 + 1.5 * IQR_val
      outliers <- sum(column < lower | column > upper, na.rm = TRUE)
      pct_outliers <- (outliers / length(column)) * 100
-     print(outliers) 
      return(round(pct_outliers, 2))
    }
    
