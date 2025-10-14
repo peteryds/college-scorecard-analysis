@@ -184,7 +184,8 @@ perform_data_assessment <- function(df) {
 # 12. Quality issues report with NA
    quality_issues <- quality_summary %>%
      filter(Completeness_Percentage < 70 | Consistency < 90 | Outlier_Percentage > 5)
-   write.csv(quality_issues, "data_quality_issues.csv", row.names = FALSE)
+   if (!dir.exists("output")) dir.create("output")
+   write.csv(quality_issues, file = file.path("output", "data_quality_issues.csv"), row.names = FALSE)
   
 # 13. Identify variables that are completely empty
     na_only_vars <- master_table %>% # variables with NA
