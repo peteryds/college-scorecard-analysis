@@ -40,3 +40,6 @@ data
 # R packages folder
 /renv/
 
+# MacOS system file
+.DS_Store
+
