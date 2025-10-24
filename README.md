@@ -2,17 +2,11 @@
 
 This project analyzes the **Return of Investment of higher education in the United States**.
 
-## Table of Contents
-
--   [Analysis Pipeline](#analysis-pipeline)
--   [Project Structure](#project-structure)
--   [Setup and Installation](#setup-and-installation)
-
-## Analysis Pipeline {#analysis-pipeline}
+## Analysis Pipeline 
 
 1.  **Data Loading: API-first, but Cached Locally**
     -   The script automatically detects if a local CSV already exists.
-    -   If so, it **skips the API call** and loads the cached file
+    -   If so, it **skips the API call** and loads the disk cached file
     -   If not, **fetch live data from the official API** and **saved as a CSV file**, so subsequent runs can reuse the same data
 2.  **Data Quality Check**
     -   Identify and log issues in `data_quality_issues.csv`
@@ -25,7 +19,7 @@ This project analyzes the **Return of Investment of higher education in the Unit
     -   Summary statistics
     -   Visualizations using `ggplot2`
 
-## Project Structure {#project-structure}
+## Project Structure 
 
 -   `R/`: Contains all custom R functions used in the project.
     -   `load_data.R`: Handles fetching data from the API and local caching.
@@ -42,7 +36,7 @@ This project analyzes the **Return of Investment of higher education in the Unit
 -   `README.md`: Overview of the project.
 -   `report.Rmd`: Final analysis report.
 
-## Setup and Installation {#setup-and-installation}
+## Setup and Installation 
 
 Follow these steps to get the project running on your local machine.
 
